@@ -1,5 +1,6 @@
 import "./index.css";
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { v4 as uuidv4 } from "uuid";
 
 import {
   Search,
@@ -52,45 +53,62 @@ function ChatPromptButton(icon: React.ReactNode) {
     </button>
   );
 }
+type Message = { role: "user" | "assistant"; content: string };
+type History = Record<string, Message[]>;
+type Nugget = {
+  title: string;
+  id: keyof History;
+};
 
 function App() {
   // manage input state and chat history state
   const [input, setInput] = useState("");
 
-  // sidebar chats state to store the list of chat titles
-  const [chats, setChats] = useState(initialChats);
-
-  // isNewChat state to manage if a new chat is being created
-  const [isNewChat, setIsNewChat] = useState(false);
+  const [currentChatId, setCurrentChatId] = useState<keyof History>("");
 
   // chat history state to store messages with role and content
   // role can be either user or assistant and content is the message text
-  const [chatHistory, setChatHistory] = useState<
-    { role: "user" | "assistant"; content: string }[]
-  >([]);
+  const [chatHistory, setChatHistory] = useState<History>({
+    [uuidv4()]: [],
+  });
 
   // set new chat state to true and clear chat history
   const handleNewChat = () => {
-    setChatHistory([]);
-    setIsNewChat(true);
+    const newChatID = uuidv4(); // Generate a unique ID for the new chat
+    setChatHistory((prev) => ({
+      ...prev,
+      [newChatID]: [], // Create a new chat with a unique ID
+    }));
+    setCurrentChatId(newChatID); // Set the current chat ID to the new chat
+    setInput(""); // Clear the input field
   };
+
+  useEffect(() => {
+    if (!currentChatId) {
+      setCurrentChatId(Object.keys(chatHistory)[0] ?? "");
+    }
+  }, []);
 
   // Function to handle sending messages
   // It checks if input is not empty, adds user message to chat history,
   const handleSendMessage = async () => {
     if (!input.trim()) return;
 
-    // If this is a new chat add a new chat title based on the users first message
-    if (isNewChat) {
-      // Use the first 6 words or less as the chat title
-      const firstWords = input.trim().split(" ").slice(0, 6).join(" ");
-      setChats([firstWords, ...chats]);
-      setIsNewChat(false);
-    }
-
     // Add user message to chat history prev is previous state
     // creates a new array with the previous messages and the new user message
-    setChatHistory((prev) => [...prev, { role: "user", content: input }]);
+    if (!currentChatId || !(currentChatId in chatHistory)) {
+      return;
+    }
+    setChatHistory((prev) => ({
+      ...prev,
+      [currentChatId]: [
+        ...prev[currentChatId],
+        { role: "user", content: input },
+      ],
+    }));
+
+    // Clear the input field after sending the message
+    setInput("");
 
     try {
       // Send the user message to the backend API res is the http response from the API
@@ -104,22 +122,43 @@ function App() {
       const data = await res.json();
 
       // Add assistant response to chat history
-      setChatHistory((prev) => [
+      if (!currentChatId || !(currentChatId in chatHistory)) {
+        return;
+      }
+      setChatHistory((prev) => ({
         ...prev,
-        { role: "assistant", content: data.response || data.error },
-      ]);
+        [currentChatId]: [
+          ...prev[currentChatId],
+          { role: "assistant", content: data.response || data.error },
+        ],
+      }));
 
       // If the response is empty or an error, it will show "Something went wrong."
     } catch (err) {
-      setChatHistory((prev) => [
+      setChatHistory((prev) => ({
         ...prev,
-        { role: "assistant", content: "Something went wrong." },
-      ]);
+        [currentChatId]: [
+          ...prev[currentChatId],
+          { role: "assistant", content: "Something went wrong." },
+        ],
+      }));
       console.error(err);
     }
-    // Clear the input field after sending the message
-    setInput("");
   };
+
+  const handleChatClick = useCallback(
+    (chatID: keyof History) => {
+      setCurrentChatId(chatID);
+    },
+    [chatHistory, currentChatId]
+  );
+
+  const chatList = useMemo(() => {
+    return Object.entries(chatHistory).map((item, _) => ({
+      title: item[1][0]?.content ?? "New Chat",
+      id: item[0],
+    })).reverse();
+  }, [chatHistory]);
 
   return (
     /* full height flex container*/
@@ -160,7 +199,17 @@ function App() {
             <h3 className="text-s font-medium text-gray-400 mb-2">Chats</h3>
             <div className="space-y-1">
               {/* Map through the chats array and create a button for each chat */}
-              {chats.map((chat, index) => (
+
+              {chatList.map((chat, index) => (
+                <button
+                  key={index}
+                  className="w-full flex items-center text-left text-white hover:bg-[#2a2a2a] py-2 px-3 text-sm font-normal rounded-lg"
+                  onClick={() => handleChatClick(chat.id)}
+                >
+                  <span className="truncate">{chat.title}</span>
+                </button>
+              ))}
+              {initialChats.map((chat, index) => (
                 <button
                   key={index}
                   className="w-full flex items-center text-left text-white hover:bg-[#2a2a2a] py-2 px-3 text-sm font-normal rounded-lg"
@@ -218,20 +267,21 @@ function App() {
           <div className="w-full max-w-3xl relative">
             {/* Chat view */}
             <div className="flex flex-col gap-4 mb-4">
-              {chatHistory.map((msg, idx) => (
-                <div
-                  key={idx}
-                  className={
-                    msg.role === "user"
-                      ? // If the message is from user then align to right
-                        "self-end bg-[#6366f1] text-white px-4 py-2 rounded-xl max-w-[70%]"
-                      : // If the message is from assistant then align to left
-                        "self-start bg-[#2f2f2f] text-white px-4 py-2 rounded-xl max-w-[70%]"
-                  }
-                >
-                  {msg.content}
-                </div>
-              ))}
+              {currentChatId in chatHistory &&
+                chatHistory[currentChatId].map((msg, idx) => (
+                  <div
+                    key={idx}
+                    className={
+                      msg.role === "user"
+                        ? // If the message is from user then align to right
+                          "self-end bg-[#6366f1] text-white px-4 py-2 rounded-xl max-w-[70%]"
+                        : // If the message is from assistant then align to left
+                          "self-start bg-[#2f2f2f] text-white px-4 py-2 rounded-xl max-w-[70%]"
+                    }
+                  >
+                    {msg.content}
+                  </div>
+                ))}
             </div>
             {/* Input and icons */}
             <div className="relative w-full">
