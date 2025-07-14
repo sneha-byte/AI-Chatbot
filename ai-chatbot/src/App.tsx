@@ -250,27 +250,37 @@ function App() {
         </div>
 
         {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col items-center justify-center p-8">
-          <div className="w-full max-w-3xl relative">
-            {/* Chat view */}
-            <div className="flex flex-col gap-4 mb-4">
-              {currentChatId in chatHistory &&
-                chatHistory[currentChatId].map((msg, idx) => (
-                  <div
-                    key={idx}
-                    className={
-                      msg.role === "user"
-                        ? // If the message is from user then align to right
-                          "self-end bg-[#6366f1] text-white px-4 py-2 rounded-xl max-w-[70%]"
-                        : // If the message is from assistant then align to left
-                          "self-start bg-[#2f2f2f] text-white px-4 py-2 rounded-xl max-w-[70%]"
-                    }
-                  >
-                    {msg.content}
-                  </div>
-                ))}
-            </div>
-            {/* Input and icons */}
+        <div
+          className={`flex-1 flex flex-col items-center p-7 transition-all duration-500 ${
+            // if there are messages apply justify between to push first chiuld to top and last child to bottom else justify center to put all in the middle of screen
+            chatHistory[currentChatId]?.length > 0
+              ? "justify-between"
+              : "justify-center"
+          }`}
+        >
+          <div className="w-full max-w-4xl flex flex-col gap-4">
+            {chatHistory[currentChatId]?.length > 0 ? (
+              chatHistory[currentChatId].map((msg, idx) => (
+                <div
+                  key={idx}
+                  className={`${
+                    msg.role === "user"
+                      ? "self-end bg-[#6366f1]"
+                      : "self-start bg-[#2f2f2f]"
+                  } text-white px-4 py-2 rounded-xl max-w-[90%]`}
+                >
+                  {msg.content}
+                </div>
+              ))
+            ) : (
+              <div className="text-center text-2xl font-bold text-white opacity-70 flex-1 flex items-center justify-center">
+                How can I help you today?
+              </div>
+            )}
+          </div>
+
+          {/* Input at the bottom */}
+          <div className="w-full max-w-4xl mt-4">
             <div className="relative w-full">
               <input
                 type="text"
@@ -295,5 +305,4 @@ function App() {
     </div>
   );
 }
-
 export default App;
