@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 
 /*component state data some hardcoded chats */
-const chatHistory = [
+const initialChats = [
   "Missing dev script fix",
   "Number Base Conversions",
   "GCD and Linear Combination",
@@ -54,26 +54,71 @@ function ChatPromptButton(icon: React.ReactNode) {
 }
 
 function App() {
-  // State to hold input and response
+  // manage input state and chat history state
   const [input, setInput] = useState("");
-  const [response, setResponse] = useState("");
 
+  // sidebar chats state to store the list of chat titles
+  const [chats, setChats] = useState(initialChats);
+
+  // isNewChat state to manage if a new chat is being created
+  const [isNewChat, setIsNewChat] = useState(false);
+
+  // chat history state to store messages with role and content
+  // role can be either user or assistant and content is the message text
+  const [chatHistory, setChatHistory] = useState<
+    { role: "user" | "assistant"; content: string }[]
+  >([]);
+
+  // set new chat state to true and clear chat history
+  const handleNewChat = () => {
+    setChatHistory([]);
+    setIsNewChat(true);
+  };
+
+  // Function to handle sending messages
+  // It checks if input is not empty, adds user message to chat history,
   const handleSendMessage = async () => {
     if (!input.trim()) return;
 
+    // If this is a new chat add a new chat title based on the users first message
+    if (isNewChat) {
+      // Use the first 6 words or less as the chat title
+      const firstWords = input.trim().split(" ").slice(0, 6).join(" ");
+      setChats([firstWords, ...chats]);
+      setIsNewChat(false);
+    }
+
+    // Add user message to chat history prev is previous state
+    // creates a new array with the previous messages and the new user message
+    setChatHistory((prev) => [...prev, { role: "user", content: input }]);
+
     try {
+      // Send the user message to the backend API res is the http response from the API
       const res = await fetch("http://localhost:5000/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: input }),
       });
 
+      // res.json gets actual data from the response which is the assistant's reply
       const data = await res.json();
-      setResponse(data.response || data.error);
+
+      // Add assistant response to chat history
+      setChatHistory((prev) => [
+        ...prev,
+        { role: "assistant", content: data.response || data.error },
+      ]);
+
+      // If the response is empty or an error, it will show "Something went wrong."
     } catch (err) {
-      setResponse("Something went wrong.");
+      setChatHistory((prev) => [
+        ...prev,
+        { role: "assistant", content: "Something went wrong." },
+      ]);
       console.error(err);
     }
+    // Clear the input field after sending the message
+    setInput("");
   };
 
   return (
@@ -83,7 +128,13 @@ function App() {
       <div className="w-70 bg-black hidden md:flex flex-col">
         {/* Top Section of side bar with new chat and search chat and library button */}
         <div className="p-4 space-y-2">
-          {SideBarButton(<MessageSquarePlus className="w-4 h-4" />, "New chat")}
+          <button
+            onClick={handleNewChat}
+            className="w-full flex items-center gap-3 text-white hover:bg-[#2a2a2a] h-11 px-3 rounded-lg"
+          >
+            <MessageSquarePlus className="w-4 h-4" />
+            New chat
+          </button>
           {SideBarButton(<Search className="w-4 h-4" />, "Search chats")}
           {SideBarButton(<BookOpen className="w-4 h-4" />, "Library")}
         </div>
@@ -108,7 +159,8 @@ function App() {
           <div className="px-3 py-2">
             <h3 className="text-s font-medium text-gray-400 mb-2">Chats</h3>
             <div className="space-y-1">
-              {chatHistory.map((chat, index) => (
+              {/* Map through the chats array and create a button for each chat */}
+              {chats.map((chat, index) => (
                 <button
                   key={index}
                   className="w-full flex items-center text-left text-white hover:bg-[#2a2a2a] py-2 px-3 text-sm font-normal rounded-lg"
@@ -163,37 +215,39 @@ function App() {
 
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col items-center justify-center p-8">
-          <h1 className="text-2xl font-medium text-white mb-8">
-            What are you working on?
-          </h1>
-
           <div className="w-full max-w-3xl relative">
-            <div className="relative">
-              {/* Text box when changed set state to current input which is e.target.value  */}
+            {/* Chat view */}
+            <div className="flex flex-col gap-4 mb-4">
+              {chatHistory.map((msg, idx) => (
+                <div
+                  key={idx}
+                  className={
+                    msg.role === "user"
+                      ? // If the message is from user then align to right
+                        "self-end bg-[#6366f1] text-white px-4 py-2 rounded-xl max-w-[70%]"
+                      : // If the message is from assistant then align to left
+                        "self-start bg-[#2f2f2f] text-white px-4 py-2 rounded-xl max-w-[70%]"
+                  }
+                >
+                  {msg.content}
+                </div>
+              ))}
+            </div>
+            {/* Input and icons */}
+            <div className="relative w-full">
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                /* When enter is pressed call handleSendMessage function */
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleSendMessage();
                 }}
                 placeholder="Ask anything"
-                className="w-full bg-[#2f2f2f] border border-white text-white rounded-xl py-4 px-4"
+                className="w-full bg-[#2f2f2f] border border-white text-white rounded-xl py-4 px-4 pr-40"
               />
-
-              {/* Check if response exists and then  */}
-              {response && (
-                <div className="mt-4 text-white">
-                  <strong>GPT:</strong> {response}
-                </div>
-              )}
-
-              <div className="absolute right-3 top-1/2  -translate-y-1/2 flex items-center gap-2">
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
                 {ChatPromptButton(<Plus className="w-4 h-4" />)}
-
                 <span className="text-xs text-gray-400">Tools</span>
-
                 {ChatPromptButton(<Wrench className="w-4 h-4" />)}
                 {ChatPromptButton(<Mic className="w-4 h-4" />)}
               </div>

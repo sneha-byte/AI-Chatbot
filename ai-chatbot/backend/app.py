@@ -46,7 +46,7 @@ def chat():
         assistant_reply = response.choices[0].message.content
         return jsonify({"response": assistant_reply})  
 
-    # If there is an error then return json error messageSS
+    # If there is an error then return json error message
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
