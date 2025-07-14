@@ -21,18 +21,12 @@ def chat():
     data = request.get_json()  
     
     # Get the message value from the data dictionary 
-    user_message = data.get("message")
+    conversation = data.get("conversation")
 
     #If the message is not there then return json error message 
-    if not user_message:
+    if not conversation:
         return jsonify({"error": "No message provided"}), 400
-
-    # Array list of dictionaries, role: system sets the assistants behavior and role:user sends user input to openAI 
-    conversation = [
-        {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": user_message}
-    ]
-
+    
     try:
         # Send message to OpenAI
         response = client.chat.completions.create(

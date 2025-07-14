@@ -16,25 +16,6 @@ import {
   Crown,
 } from "lucide-react";
 
-/*component state data some hardcoded chats */
-const initialChats = [
-  "Missing dev script fix",
-  "Number Base Conversions",
-  "GCD and Linear Combination",
-  "Inductive Proof Verification",
-  "Android R Class Usage",
-  "Inverse Function Explanation",
-  "Fetch My Posts",
-  "Adding try-catch blocks",
-  "Login Activity Firebase Setup",
-  "Push Repo to GitHub",
-  "Increase gap between elements",
-  "DTFT DFT Evaluation",
-  "LTI system frequency response",
-  "DTFT Impulse Response Calcula...",
-  "JSP ClassNotFoundException Fix",
-];
-
 // Funtion to create a button with icon/react node and label to have a icon and text next to each other
 function SideBarButton(icon: React.ReactNode, label: string) {
   return (
@@ -53,36 +34,36 @@ function ChatPromptButton(icon: React.ReactNode) {
     </button>
   );
 }
+
 type Message = { role: "user" | "assistant"; content: string };
+
+// History type to store chat history. record is an object with chat ID as key and an array of messages as values
 type History = Record<string, Message[]>;
-type Nugget = {
-  title: string;
-  id: keyof History;
-};
 
 function App() {
   // manage input state and chat history state
   const [input, setInput] = useState("");
 
+  // stores currently selected chat ID and uses keyof History to matches it to one of the keys in the chat history
   const [currentChatId, setCurrentChatId] = useState<keyof History>("");
 
-  // chat history state to store messages with role and content
-  // role can be either user or assistant and content is the message text
+  // chat history state initialized with a unique ID and an empty array
   const [chatHistory, setChatHistory] = useState<History>({
     [uuidv4()]: [],
   });
 
-  // set new chat state to true and clear chat history
+  // function to create new chat, set id for new chat and clear input field. Add new empty chat to chat history
   const handleNewChat = () => {
-    const newChatID = uuidv4(); // Generate a unique ID for the new chat
+    const newChatID = uuidv4();
     setChatHistory((prev) => ({
       ...prev,
-      [newChatID]: [], // Create a new chat with a unique ID
+      [newChatID]: [],
     }));
-    setCurrentChatId(newChatID); // Set the current chat ID to the new chat
-    setInput(""); // Clear the input field
+    setCurrentChatId(newChatID);
+    setInput("");
   };
 
+  // if no current chat ID is selected, it sets the first chat ID from chat history as the current chat ID
   useEffect(() => {
     if (!currentChatId) {
       setCurrentChatId(Object.keys(chatHistory)[0] ?? "");
@@ -90,15 +71,14 @@ function App() {
   }, []);
 
   // Function to handle sending messages
-  // It checks if input is not empty, adds user message to chat history,
   const handleSendMessage = async () => {
     if (!input.trim()) return;
 
-    // Add user message to chat history prev is previous state
-    // creates a new array with the previous messages and the new user message
+    // update chat history by appending the user message onto the chat with currentChatId
     if (!currentChatId || !(currentChatId in chatHistory)) {
       return;
     }
+
     setChatHistory((prev) => ({
       ...prev,
       [currentChatId]: [
@@ -111,20 +91,29 @@ function App() {
     setInput("");
 
     try {
-      // Send the user message to the backend API res is the http response from the API
+      // Create new chat by appending the user message to existing chat with currentChatId to make sure the state is updated when its given to the backend
+      const newChat = [
+        ...chatHistory[currentChatId],
+        { role: "user", content: input },
+      ];
+
+      // Send the chat to the backend API
       const res = await fetch("http://localhost:5000/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: input }),
+        body: JSON.stringify({ conversation: newChat }),
       });
+
+      console.log("Sending to backend:", chatHistory[currentChatId]);
 
       // res.json gets actual data from the response which is the assistant's reply
       const data = await res.json();
 
-      // Add assistant response to chat history
+      // Update chat history of chat with current chat id with the assistant's response or error message
       if (!currentChatId || !(currentChatId in chatHistory)) {
         return;
       }
+
       setChatHistory((prev) => ({
         ...prev,
         [currentChatId]: [
@@ -146,6 +135,7 @@ function App() {
     }
   };
 
+  // usecallback to avoid recreating the function on every render
   const handleChatClick = useCallback(
     (chatID: keyof History) => {
       setCurrentChatId(chatID);
@@ -153,11 +143,15 @@ function App() {
     [chatHistory, currentChatId]
   );
 
+  // in chatList each chat object has a title which is the content of the 1st message and the key of the chat in chatHistory
+  // useMemo to avoid unnecessary re renders and only recalculate chatList when chatHistory changes
   const chatList = useMemo(() => {
-    return Object.entries(chatHistory).map((item, _) => ({
-      title: item[1][0]?.content ?? "New Chat",
-      id: item[0],
-    })).reverse();
+    return Object.entries(chatHistory)
+      .map((item, _) => ({
+        title: item[1][0]?.content ?? "New Chat",
+        id: item[0],
+      }))
+      .reverse();
   }, [chatHistory]);
 
   return (
@@ -204,17 +198,10 @@ function App() {
                 <button
                   key={index}
                   className="w-full flex items-center text-left text-white hover:bg-[#2a2a2a] py-2 px-3 text-sm font-normal rounded-lg"
+                  // onClick handler to set the current chat ID when clicked
                   onClick={() => handleChatClick(chat.id)}
                 >
                   <span className="truncate">{chat.title}</span>
-                </button>
-              ))}
-              {initialChats.map((chat, index) => (
-                <button
-                  key={index}
-                  className="w-full flex items-center text-left text-white hover:bg-[#2a2a2a] py-2 px-3 text-sm font-normal rounded-lg"
-                >
-                  <span className="truncate">{chat}</span>
                 </button>
               ))}
             </div>
