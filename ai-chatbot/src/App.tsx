@@ -104,8 +104,6 @@ function App() {
         body: JSON.stringify({ conversation: newChat }),
       });
 
-      console.log("Sending to backend:", chatHistory[currentChatId]);
-
       // res.json gets actual data from the response which is the assistant's reply
       const data = await res.json();
 
@@ -250,9 +248,9 @@ function App() {
         </div>
 
         {/* Main Chat Area */}
+
         <div
-          className={`flex-1 flex flex-col items-center p-7 transition-all duration-500 ${
-            // if there are messages apply justify between to push first chiuld to top and last child to bottom else justify center to put all in the middle of screen
+          className={`flex-1 flex flex-col items-center p-7 transition-all duration-500 overflow-scroll hide-scrollbar ${
             chatHistory[currentChatId]?.length > 0
               ? "justify-between"
               : "justify-center"
@@ -265,22 +263,24 @@ function App() {
                   key={idx}
                   className={`${
                     msg.role === "user"
-                      ? "self-end bg-[#6366f1]"
-                      : "self-start bg-[#2f2f2f]"
-                  } text-white px-4 py-2 rounded-xl max-w-[90%]`}
+                      ? "self-end bg-[#2f2f2f]"
+                      : "self-start bg-[#212121]"
+                  } 
+                    ${idx === chatHistory[currentChatId].length - 1 ? "mb-[120px]" : ""}
+                  text-white px-5 py-3 rounded-3xl max-w-[100%]`}
                 >
                   {msg.content}
                 </div>
               ))
             ) : (
-              <div className="text-center text-2xl font-bold text-white opacity-70 flex-1 flex items-center justify-center">
+              <div className="text-center text-4xl font-bold text-white flex-1 flex items-center justify-center mb-10">
                 How can I help you today?
               </div>
             )}
           </div>
 
           {/* Input at the bottom */}
-          <div className="w-full max-w-4xl mt-4">
+          <div className={(chatHistory[currentChatId]?.length > 0 && "fixed bottom-10 ")+ " w-full max-w-4xl mt-4 mb-8"}>
             <div className="relative w-full">
               <input
                 type="text"
