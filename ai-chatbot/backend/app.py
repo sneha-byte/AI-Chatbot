@@ -38,7 +38,9 @@ def chat():
         
         # Take the response key from assistant reply and return to the frontend
         assistant_reply = response.choices[0].message.content
-        return jsonify({"response": assistant_reply})  
+        print(f"Assistant reply: {assistant_reply}")
+        return jsonify({"response": assistant_reply.replace("\n", "<br>")})
+       
 
     # If there is an error then return json error message
     except Exception as e:

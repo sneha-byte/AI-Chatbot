@@ -14,6 +14,7 @@ import {
   Sparkles,
   Zap,
   Crown,
+  Replace,
 } from "lucide-react";
 
 // Funtion to create a button with icon/react node and label to have a icon and text next to each other
@@ -47,7 +48,7 @@ function App() {
   // stores currently selected chat ID and uses keyof History to matches it to one of the keys in the chat history
   const [currentChatId, setCurrentChatId] = useState<keyof History>("");
 
-  // chat history state initialized with a unique ID and an empty array
+  // entire memory of chats with a unique ID for each chat and an array of messages in that chat
   const [chatHistory, setChatHistory] = useState<History>({
     [uuidv4()]: [],
   });
@@ -112,6 +113,8 @@ function App() {
         return;
       }
 
+      console.log("Response from backend:", data.response);
+      data.response = data.response.replace("/n", "<br>");
       setChatHistory((prev) => ({
         ...prev,
         [currentChatId]: [
@@ -138,6 +141,7 @@ function App() {
     (chatID: keyof History) => {
       setCurrentChatId(chatID);
     },
+    // only recreate when chatHistory or currentChatId changes
     [chatHistory, currentChatId]
   );
 
@@ -266,7 +270,11 @@ function App() {
                       ? "self-end bg-[#2f2f2f]"
                       : "self-start bg-[#212121]"
                   } 
-                    ${idx === chatHistory[currentChatId].length - 1 ? "mb-[120px]" : ""}
+                    ${
+                      idx === chatHistory[currentChatId].length - 1
+                        ? "mb-[120px]"
+                        : ""
+                    }
                   text-white px-5 py-3 rounded-3xl max-w-[100%]`}
                 >
                   {msg.content}
@@ -280,7 +288,12 @@ function App() {
           </div>
 
           {/* Input at the bottom */}
-          <div className={(chatHistory[currentChatId]?.length > 0 && "fixed bottom-10 ")+ " w-full max-w-4xl mt-4 mb-8"}>
+          <div
+            className={
+              (chatHistory[currentChatId]?.length > 0 && "fixed bottom-10 ") +
+              " w-full max-w-4xl mt-4 mb-8"
+            }
+          >
             <div className="relative w-full">
               <input
                 type="text"
