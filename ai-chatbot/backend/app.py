@@ -3,6 +3,7 @@ from openai import OpenAI
 import os
 import dotenv
 from flask_cors import CORS
+import re
 
 #Load api key from .env file
 dotenv.load_dotenv()  
@@ -14,6 +15,33 @@ app = Flask(__name__)
 
 # Enable CORS for all routes so any frontend can access the backend API
 CORS(app)
+
+def convert_latex_math_to_markdown(text: str) -> str:
+    # Convert inline math: \( ... \) → $...$
+    text = re.sub(r'\\\((.+?)\\\)', r'$\1$', text)
+
+    # Convert block math: \[ ... \] → $$...$$
+    text = re.sub(r'\\\[(.+?)\\\]', r'$$\1$$', text, flags=re.DOTALL)
+
+    return text
+
+def fix_markdown_tables(text: str) -> str:
+    # Remove empty lines between rows
+    lines = text.split("\n")
+    new_lines = []
+    inside_table = False
+
+    for line in lines:
+        if "|" in line:
+            if not inside_table:
+                inside_table = True
+            new_lines.append(line.strip())
+        else:
+            if inside_table and line.strip() == "":
+                continue  
+            new_lines.append(line)
+
+    return "\n".join(new_lines)
 
 @app.route("/chat", methods=["POST"])  
 def chat():
@@ -37,10 +65,11 @@ def chat():
         )
         
         # Take the response key from assistant reply and return to the frontend
-        assistant_reply = response.choices[0].message.content
-        print(f"Assistant reply: {assistant_reply}")
-        return jsonify({"response": assistant_reply.replace("\n", "<br>")})
-       
+        raw_reply = response.choices[0].message.content
+        assistant_reply = convert_latex_math_to_markdown(raw_reply)
+        assistant_reply = fix_markdown_tables(assistant_reply)
+
+        return jsonify({"response": assistant_reply})  
 
     # If there is an error then return json error message
     except Exception as e:
