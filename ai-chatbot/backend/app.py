@@ -58,7 +58,7 @@ def chat():
     try:
         # Send message to OpenAI
         response = client.chat.completions.create(
-            model="gpt-4.1-2025-04-14",
+            model="gpt-4.1-mini-2025-04-14",
             messages=conversation,
             max_tokens=1000,
             temperature=1
