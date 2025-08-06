@@ -58,6 +58,10 @@ function App() {
   const [chatHistory, setChatHistory] = useState<History>({
     [uuidv4()]: [],
   });
+  const [uploading, setUploading] = useState(false);
+  const [uploadSuccessChatId, setUploadSuccessChatId] = useState<
+    keyof History | null
+  >(null);
 
   // Random greeting messages
   const greetingMessages = [
@@ -184,10 +188,29 @@ function App() {
   // NEW (add this just below chatList):
   const currentMessages = chatHistory[currentChatId] ?? [];
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    await fetch("http://localhost:5000/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    setUploading(false);
+    setUploadSuccessChatId(currentChatId);
+  };
+
   return (
     /* full height flex container with dark background */
     <div className="flex h-screen bg-[#212121] text-white overflow-hidden">
       {/* Left Sidebar */}
+
       <div className="w-64 bg-[#181818] hidden md:flex flex-col border-r border-[#2a2a2a]">
         {/* Top Section of side bar with new chat and search chat and library button */}
         <div className="p-3 space-y-2">
@@ -200,6 +223,30 @@ function App() {
           </button>
           {SideBarButton(<Search className="w-4 h-4" />, "Search chats")}
           {SideBarButton(<BookOpen className="w-4 h-4" />, "Library")}
+          <input
+            className="hidden"
+            id="file-upload"
+            type="file"
+            onChange={handleFileUpload}
+          />
+          <label
+            htmlFor="file-upload"
+            className="w-full flex items-center gap-3 text-white hover:bg-[#2a2a2a] h-11 px-3 rounded-lg transition-colors cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="text-sm">Upload PDF/TXT</span>
+          </label>
+          {uploading && (
+            <div className="px-3 py-2 text-sm text-gray-400 animate-pulse">
+              Uploading & indexing...
+            </div>
+          )}
+
+          {uploadSuccessChatId === currentChatId && (
+            <div className="px-3 py-2 text-sm text-green-500 ">
+              File indexed ✅
+            </div>
+          )}
         </div>
 
         {/* Divider */}
