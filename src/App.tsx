@@ -132,7 +132,7 @@ function App() {
       ];
 
       // Send the chat to the backend API
-      const res = await fetch("http://localhost:5000/chat", {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ conversation: newChat }),
@@ -197,7 +197,7 @@ function App() {
     const formData = new FormData();
     formData.append("file", file);
 
-    await fetch("http://localhost:5000/upload", {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/upload`, {
       method: "POST",
       body: formData,
     });

@@ -14,8 +14,12 @@ api_key = os.getenv("OPEN_AI_API")
 client = OpenAI(api_key=api_key)
 
 app = Flask(__name__)
-# Allow browser frontend at http://localhost:5173
-CORS(app, resources={r"/*": {"origins": "http://localhost:5173"}})
+
+@app.route("/")
+def home():
+    return "AI Chatbot backend is running!"
+
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # (text, embedding) pairs from uploaded file
 stored_vectors = []  
@@ -143,4 +147,4 @@ def chat():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(port=5000, debug=True)
+    app.run(port=10000, debug=True)
